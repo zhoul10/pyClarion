@@ -37,7 +37,25 @@ class AssociativeRulesChannel(Channel[float]):
             with them; methods for updating knowledge base according to learning 
             rules and stats should be implemented within the class. 
     """
-    pass
+    def __init__(self, assoc: AssociativeRuleSequence) -> None:
+
+        self.assoc = [[chunk, dict(weights)] for chunk, weights in assoc]
+
+    def __call__(self, input_map):
+        
+        output = ActivationPacket(origin=Level.Top)
+        for conclusion, conditions in self.assoc:
+            strength = 0.
+            for cond in conditions: 
+                strength += (conditions[cond] * 
+                    input_map.get(cond, default_activation(cond))
+                )
+            try:
+                activation = max(output[conclusion], strength)
+            except KeyError:
+                activation = strength
+            output[conclusion] = activation
+        return output
 
 
 class BottomUpChannel(Channel[float]):
