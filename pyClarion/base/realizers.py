@@ -137,7 +137,7 @@ class OutputView(object):
     def clear(self) -> None:
         """Clear output buffer.""" 
 
-        if hasattr(self, '_buffer'): del self._buffer       
+        del self._buffer       
 
 
 class SubsystemInputMonitor(object):
@@ -183,8 +183,8 @@ class ConstructRealizer(object):
     constructs. 
     """
 
-    ctype: ClassVar[ConstructType]
-    __slots__: ComponentSpec = ()
+    ctype: ClassVar[ConstructType] = ConstructType.NullConstruct
+    __slots__: ComponentSpec = ("csym",)
 
     def __init__(self, csym: ConstructSymbol) -> None:
         """Initialize a new construct realizer.
@@ -262,7 +262,10 @@ class BasicConstructRealizer(ConstructRealizer):
     def clear_activations(self) -> None:
         """Clear activations stored in output view."""
 
-        self.output.clear()
+        try:
+            self.output.clear()
+        except AttributeError:
+            pass
 
 
 class NodeRealizer(BasicConstructRealizer):
@@ -616,37 +619,37 @@ class SubsystemRealizer(ContainerConstructRealizer):
         
         possibilities: List[bool] = [
             (
-                target.ctype is ConstructType.Response and
+                target.ctype == ConstructType.Response and
                 bool(source.ctype & cast(ResponseID, target.cid).itype)
             ),
             (
-                target.ctype is ConstructType.Behavior and
+                target.ctype == ConstructType.Behavior and
                 source == cast(BehaviorID, target.cid).response
             ),
             (
-                source.ctype is ConstructType.Feature and
-                target.ctype is ConstructType.Flow and
+                source.ctype == ConstructType.Feature and
+                target.ctype == ConstructType.Flow and
                 bool(
                     cast(FlowID, target.cid).ftype & (FlowType.BB | FlowType.BT)
                 )
             ),
             (
-                source.ctype is ConstructType.Chunk and
-                target.ctype is ConstructType.Flow and
+                source.ctype == ConstructType.Chunk and
+                target.ctype == ConstructType.Flow and
                 bool(
                     cast(FlowID, target.cid).ftype & (FlowType.TT | FlowType.TB)
                 )
             ),
             (
-                source.ctype is ConstructType.Flow and
-                target.ctype is ConstructType.Feature and
+                source.ctype == ConstructType.Flow and
+                target.ctype == ConstructType.Feature and
                 bool(
                     cast(FlowID, source.cid).ftype & (FlowType.BB | FlowType.TB)
                 )
             ),
             (
-                source.ctype is ConstructType.Flow and
-                target.ctype is ConstructType.Chunk and
+                source.ctype == ConstructType.Flow and
+                target.ctype == ConstructType.Chunk and
                 bool(
                     cast(FlowID, source.cid).ftype & (FlowType.TT | FlowType.BT)
                 )
@@ -745,8 +748,8 @@ class AgentRealizer(ContainerConstructRealizer):
         
         possibilities = [
             (
-                source.ctype is ConstructType.Buffer and
-                target.ctype is ConstructType.Subsystem and
+                source.ctype == ConstructType.Buffer and
+                target.ctype == ConstructType.Subsystem and
                 target in cast(BufferID, source.cid).outputs
             )
         ]
@@ -800,17 +803,17 @@ def make_realizer(csym: ConstructSymbol) -> ConstructRealizer:
 
     if csym.ctype in ConstructType.Node:
         return NodeRealizer(csym)
-    elif csym.ctype is ConstructType.Flow:
+    elif csym.ctype == ConstructType.Flow:
         return FlowRealizer(csym)
-    elif csym.ctype is ConstructType.Response:
+    elif csym.ctype == ConstructType.Response:
         return ResponseRealizer(csym)
-    elif csym.ctype is ConstructType.Behavior:
+    elif csym.ctype == ConstructType.Behavior:
         return BehaviorRealizer(csym)
-    elif csym.ctype is ConstructType.Buffer:
+    elif csym.ctype == ConstructType.Buffer:
         return BufferRealizer(csym)
-    elif csym.ctype is ConstructType.Subsystem:
+    elif csym.ctype == ConstructType.Subsystem:
         return SubsystemRealizer(csym)
-    elif csym.ctype is ConstructType.Agent:
+    elif csym.ctype == ConstructType.Agent:
         return AgentRealizer(csym)
     else:
         raise ValueError("Unexpected construct type in {}".format(csym))
